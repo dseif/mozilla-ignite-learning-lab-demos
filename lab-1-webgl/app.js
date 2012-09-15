@@ -31,7 +31,7 @@ io.sockets.on('connection', function (socket) {
   	if(started) return; else started = true;
 
   	// TODO: Base this off the level-of-detail param
-  	var path = __dirname + '/datasets/1-percent/frames.csv';
+  	var path = __dirname + '/datasets/100-percent/frames.csv';
 
   	// The current frame count
   	var count = 0;
@@ -43,11 +43,23 @@ io.sockets.on('connection', function (socket) {
   	// Ideally, we'd like to stay at 30 fps
   	var throttle = 10; 
 
+    var numLines = 1000000,
+        baseCase,
+        _frameSize = 1000000;
     console.log('Beginning frame sending (unthrottled)');
 
-    // Open the CSV, parse it
-    csv().fromPath(path)
-      .on('data', function(data,index) {
+    socket.on( "streamdatachanged", function( data ) {
+      var stringified = "" + data.percent * baseCase;
+      _frameSize = +stringified.split( "." )[ 0 ];
+    });
+    fs.readFile( path, "utf-8", function( err, data ) {
+      var lines = data.split( "\n" ),
+          frameSize = lines.indexOf( "eof" );
+
+      _frameSize = numLines = baseCase = frameSize;
+
+      // Open the CSV, parse it
+      csv().fromPath(path).on('data', function(data,index) {
 
         // Since all frames are in a single CSV for the highest performance,
         // check for the 'end of frame'
@@ -58,15 +70,20 @@ io.sockets.on('connection', function (socket) {
 
           // housework
           count++;
+          numLines = _frameSize;
           rows = [];
         }
 
-        // If it's not the end of frame, add it to the row buffer
-        rows.push(data);
+        if ( numLines > 0 ) {
+          numLines--;
+          // If it's not the end of frame, add it to the row buffer
+          rows.push(data);
+        }
       })
       .on('end', function() {
         console.log('Done sending frames')
       });
+    });
 
   });
  

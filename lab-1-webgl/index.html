@@ -41,7 +41,11 @@
 
              var controlData = {
                 Throughput : 100
-             }
+              };
+
+             var streamData = {
+               StreamData: 100
+             };
 
              var renderer, scene, camera, stats, controls;
              var uniforms, attributes;
@@ -137,7 +141,13 @@
                          right: 'auto',
                          left: 10
                      });
-                     gui.add(controlData, 'Throughput').name('Speed').min(0).max(100);
+                     var streamDataController = gui.add(streamData, 'StreamData').name('StreamData').min(0).max(100);
+                     streamDataController.onChange(function( value ) {
+                       console.log( value / 100 );
+                       socket.emit( "streamdatachanged", {
+                         percent: value / 100
+                       });
+                     });
                  }
 
                  function onWindowResize() {
@@ -168,14 +178,16 @@
                  });
              });
 
+             socket.on( "framesize", function( data ) {
+             });
              socket.on('frame', function (data) {
 
-                 if (!setup && data.frame.length > 1) {
+                 if (!setup) {
                      doSetup(data);
                  }
 
                  var totalPoints = attributes.size.value.length;
-                 var pointsToUpdate = attributes.size.value.length * (controlData.Throughput/100);
+                 var pointsToUpdate = attributes.size.value.length * (streamData.StreamData/100);
 
                  // I don't want to keep removing and adding points to the particle system, so 
                  // we're going to hide and undie them when necessary.
